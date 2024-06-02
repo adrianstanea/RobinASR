@@ -6,20 +6,29 @@ import time
 import numpy as np
 import torch.distributed as dist
 import torch.utils.data.distributed
-from apex import amp
 from hydra.utils import to_absolute_path
 from omegaconf import OmegaConf
-from torch.nn.parallel import DistributedDataParallel
 from torch.nn import CTCLoss
-import time
+from torch.nn.parallel import DistributedDataParallel
 
+from apex import amp
 from deepspeech_pytorch.checkpoint import FileCheckpointHandler, GCSCheckpointHandler
-from deepspeech_pytorch.configs.train_config import SGDConfig, AdamConfig, BiDirectionalConfig, UniDirectionalConfig, \
-    FileCheckpointConfig, GCSCheckpointConfig
+from deepspeech_pytorch.configs.train_config import (
+    AdamConfig,
+    BiDirectionalConfig,
+    FileCheckpointConfig,
+    GCSCheckpointConfig,
+    SGDConfig,
+    UniDirectionalConfig,
+)
 from deepspeech_pytorch.decoder import GreedyDecoder
-from deepspeech_pytorch.loader.data_loader import SpectrogramDataset, DSRandomSampler, DSElasticDistributedSampler, \
-    AudioDataLoader
-from deepspeech_pytorch.logger import VisdomLogger, TensorBoardLogger
+from deepspeech_pytorch.loader.data_loader import (
+    AudioDataLoader,
+    DSElasticDistributedSampler,
+    DSRandomSampler,
+    SpectrogramDataset,
+)
+from deepspeech_pytorch.logger import TensorBoardLogger, VisdomLogger
 from deepspeech_pytorch.model import DeepSpeech, supported_rnns
 from deepspeech_pytorch.state import TrainingState
 from deepspeech_pytorch.testing import run_evaluation
@@ -200,71 +209,69 @@ def train(cfg):
         state.set_epoch(epoch=epoch)
         train_sampler.set_epoch(epoch=epoch)
         train_sampler.reset_training_step(training_step=state.training_step)
-        for i, (data) in enumerate(train_loader, start=state.training_step):
-            state.set_training_step(training_step=i)
-            inputs, targets, input_percentages, target_sizes = data
-            input_sizes = input_percentages.mul_(int(inputs.size(3))).int()
-            # measure data loading time
-            data_time.update(time.time() - end)
-            inputs = inputs.to(device)
+        # for i, (data) in enumerate(train_loader, start=state.training_step):
+        #     state.set_training_step(training_step=i)
+        #     inputs, targets, input_percentages, target_sizes = data
+        #     input_sizes = input_percentages.mul_(int(inputs.size(3))).int()
+        #     # measure data loading time
+        #     data_time.update(time.time() - end)
+        #     inputs = inputs.to(device)
 
-            out, output_sizes = model(inputs, input_sizes)
-            out = out.transpose(0, 1)  # TxNxH
+        #     out, output_sizes = model(inputs, input_sizes)
+        #     out = out.transpose(0, 1)  # TxNxH
 
-            float_out = out.float()  # ensure float32 for loss
-            loss = criterion(float_out, targets, output_sizes, target_sizes).to(device)
-            # loss = loss / inputs.size(0)  # average the loss by minibatch
-            loss_value = loss.item()
+        #     float_out = out.float()  # ensure float32 for loss
+        #     loss = criterion(float_out, targets, output_sizes, target_sizes).to(device)
+        #     # loss = loss / inputs.size(0)  # average the loss by minibatch
+        #     loss_value = loss.item()
 
-            # Check to ensure valid loss was calculated
-            valid_loss, error = check_loss(loss, loss_value)
-            if valid_loss:
-                optimizer.zero_grad()
+        #     # Check to ensure valid loss was calculated
+        #     valid_loss, error = check_loss(loss, loss_value)
+        #     if valid_loss:
+        #         optimizer.zero_grad()
 
-                # compute gradient
-                with amp.scale_loss(loss, optimizer) as scaled_loss:
-                    scaled_loss.backward()
-                torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), cfg.optim.max_norm)
-                optimizer.step()
-            else:
-                print(error)
-                print('Skipping grad update')
-                loss_value = 0
+        #         # compute gradient
+        #         with amp.scale_loss(loss, optimizer) as scaled_loss:
+        #             scaled_loss.backward()
+        #         torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), cfg.optim.max_norm)
+        #         optimizer.step()
+        #     else:
+        #         print(error)
+        #         print('Skipping grad update')
+        #         loss_value = 0
 
-            state.avg_loss += loss_value
-            losses.update(loss_value, inputs.size(0))
+        #     state.avg_loss += loss_value
+        #     losses.update(loss_value, inputs.size(0))
 
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
-                (epoch + 1), (i + 1), len(train_loader), batch_time=batch_time, data_time=data_time, loss=losses))
+        #     # measure elapsed time
+        #     batch_time.update(time.time() - end)
+        #     end = time.time()
+        #     print('Epoch: [{0}][{1}/{2}]\t'
+        #           'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+        #           'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+        #           'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
+        #         (epoch + 1), (i + 1), len(train_loader), batch_time=batch_time, data_time=data_time, loss=losses))
 
-            if main_proc and cfg.checkpointing.checkpoint_per_iteration:
-                checkpoint_handler.save_iter_checkpoint_model(epoch=epoch, i=i, state=state)
+        #     if main_proc and cfg.checkpointing.checkpoint_per_iteration:
+        #         checkpoint_handler.save_iter_checkpoint_model(epoch=epoch, i=i, state=state)
                         
-            del loss, out, float_out
+        #     del loss, out, float_out
 
-        state.avg_loss = state.avg_loss / len(train_dataset) * cfg.data.batch_size
+        # state.avg_loss = state.avg_loss / len(train_dataset) * cfg.data.batch_size
 
-        epoch_time = time.time() - start_epoch_time
-        print('Training Summary Epoch: [{0}]\t'
-              'Time taken (s): {epoch_time:.0f}\t'
-              'Average Loss {loss:.3f}\t'.format(epoch + 1, epoch_time=epoch_time, loss=state.avg_loss))
+        # epoch_time = time.time() - start_epoch_time
+        # print('Training Summary Epoch: [{0}]\t'
+        #       'Time taken (s): {epoch_time:.0f}\t'
+        #       'Average Loss {loss:.3f}\t'.format(epoch + 1, epoch_time=epoch_time, loss=state.avg_loss))
 	
-        time.sleep(15 * 60)
-
         with torch.no_grad():
-            wer, cer, output_data = run_evaluation(test_loader=test_loader,
+           wer, cer, output_data = run_evaluation(test_loader=test_loader,
                                                    device=device,
                                                    model=model,
                                                    decoder=evaluation_decoder,
                                                    target_decoder=evaluation_decoder)
                 
-            print('Validation Summary Epoch: [{0}]\t'
+        print('Validation Summary Epoch: [{0}]\t'
 		  'Average WER {wer:.3f}\t'
 		  'Average CER {cer:.3f}\t'.format(epoch + 1, wer=wer, cer=cer))
 

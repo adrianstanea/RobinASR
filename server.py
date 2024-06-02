@@ -49,9 +49,12 @@ def transcribe_file():
                                                   decoder=decoder,
                                                   device=device,
                                                   use_half=config.model.use_half)
+                # Personal addition
+                transcription = transcription[0][0]
+                
                 logging.info('File transcribed')
                 res['status'] = "OK"
-                res['transcription'] = transcription[0][0]
+                res['transcription'] = transcription
                 return jsonify(res)
         except Exception as e:
             logging.error(e)
@@ -69,10 +72,12 @@ def main(cfg: ServerConfig):
     logging.info('Setting up server...')
     device = torch.device("cuda" if cfg.model.cuda else "cpu")
 
+    logging.info("Loading model")
     model = load_model(device=device,
                        model_path=cfg.model.model_path,
                        use_half=cfg.model.use_half)
 
+    logging.info("Loading decoder")
     decoder = load_decoder("beam" if cfg.lm.decoder_type == DecoderType.beam else "greedy",
                            model.labels,
                            cfg.lm.lm_path,

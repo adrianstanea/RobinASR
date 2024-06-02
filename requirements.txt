@@ -8,7 +8,7 @@ optuna
 pytest
 python-levenshtein
 scipy
-sklearn
+scikit-learn
 sox
 torch
 torchaudio

@@ -15,8 +15,6 @@ from deepspeech_pytorch.loader.spec_augment import spec_augment
 
 def load_audio(path):
     sound, sample_rate = librosa.load(path, sr=16000)
-    # TODO this should be 32768.0 to get twos-complement range.
-    # TODO the difference is negligible but should be fixed for new models.
     # sound = sound.astype('float32') / 32767  # normalize audio
     if len(sound.shape) > 1:
         if sound.shape[1] == 1:
@@ -188,6 +186,19 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
     def __getitem__(self, index):
         sample = self.ids[index]
         audio_path, transcript_path = sample[0], sample[1]
+
+        # print(f"Opening {audio_path} and {transcript_path}")
+        # print(f"Woring on: {os.getcwd()}")
+        # if os.path.isfile(audio_path):
+        #     print("AUDIO exists")
+        # else:
+        #     print("AUDIO does not exist")
+            
+        # if os.path.isfile(transcript_path):
+        #     print("TRANSCRIPT exists")
+        # else:
+        #     print("TRANSCRIPT does not exist")
+        
         spect = self.parse_audio(audio_path)
         transcript = self.parse_transcript(transcript_path)
         return spect, transcript

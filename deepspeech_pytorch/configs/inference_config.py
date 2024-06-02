@@ -6,7 +6,8 @@ from deepspeech_pytorch.enums import DecoderType
 @dataclass
 class LMConfig:
     decoder_type: DecoderType = DecoderType.beam
-    lm_path: str = '/workspace/deepspeech.pytorch/models/corola_5gram.arpa'  # Path to an (optional) kenlm language model for use with beam search (req\'d with trie)
+    # decoder_type: DecoderType = DecoderType.greedy
+    lm_path: str = '/home/astanea/facultate/TST-Materials/PSV/RobinASR_CLEAN/deepspeech_pytorch/models/corola_5gram.arpa'  # Path to an (optional) kenlm language model for use with beam search (req\'d with trie)
     top_paths: int = 1  # Number of beams to return
     alpha: float = 0.6  # Language model weight
     beta: float = 0.7  # Language model word bonus (all words)
@@ -31,13 +32,14 @@ class InferenceConfig:
 
 @dataclass
 class TranscribeConfig(InferenceConfig):
-    audio_path: str = ''  # Audio file to predict on
-    offsets: bool = False  # Returns time offset information
+    audio_path: str = 'prediction/wavs/adr_ivan_001.wav'  # Audio file to predict on
+    offsets: bool = True  # Returns time offset information
 
 
 @dataclass
 class EvalConfig(InferenceConfig):
-    test_manifest: str = 'data/test_manifest.csv'  # Path to validation manifest csv
+    # test_manifest: str = 'data/test_manifest.csv'  # Path to validation manifest csv
+    test_manifest: str = 'data/testing_manifest.csv'  # Path to validation manifest csv
     verbose: bool = True  # Print out decoded output and error of each sample
     save_output: str = 'outputs/lm_test.txt'  # Saves output of model from test to this file_path
     batch_size: int = 64  # Batch size for testing

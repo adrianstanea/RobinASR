@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Any, List
 
-from deepspeech_pytorch.enums import DistributedBackend, SpectrogramWindow, RNNType
 from omegaconf import MISSING
+
+from deepspeech_pytorch.enums import DistributedBackend, RNNType, SpectrogramWindow
 
 defaults = [
     {"optim": "adam"},
@@ -13,11 +14,12 @@ defaults = [
 
 @dataclass
 class TrainingConfig:
+    # no_cuda: bool = True  # Enable CPU only training
     no_cuda: bool = False  # Enable CPU only training
-    finetune: bool = False  # Fine-tune the model from checkpoint "continue_from"
+    finetune: bool = True  # Fine-tune the model from checkpoint "continue_from"
     seed: int = 12345  # Seed for generators
     dist_backend: DistributedBackend = DistributedBackend.nccl  # If using distribution, the backend to be used
-    epochs: int = 70  # Number of Training Epochs
+    epochs: int = 10 #70  # Number of Training Epochs
 
 
 @dataclass
@@ -30,8 +32,8 @@ class SpectConfig:
 
 @dataclass
 class AugmentationConfig:
-    speed_volume_perturb: bool = True  # Use random tempo and gain perturbations.
-    spec_augment: bool = True  # Use simple spectral augmentation on mel spectograms.
+    speed_volume_perturb: bool = False  # Use random tempo and gain perturbations.
+    spec_augment: bool = False  # Use simple spectral augmentation on mel spectograms.
     noise_dir: str = ''  # Directory to inject noise into audio. If default, noise Inject not added
     noise_prob: float = 0.2  # Probability of noise being added per sample
     noise_min: float = 0.0  # Minimum noise level to sample from. (1.0 means all noise, not original signal)
@@ -40,10 +42,10 @@ class AugmentationConfig:
 
 @dataclass
 class DataConfig:
-    train_manifest: str = 'data/train_manifest.csv'
-    val_manifest: str = 'data/val_manifest.csv'
-    batch_size: int = 80   # Batch size for training
-    num_workers: int = 4  # Number of workers used in data-loading
+    train_manifest: str = 'data/training_manifest.csv'
+    val_manifest: str = 'data/testing_manifest.csv'
+    batch_size: int = 80 # 80  # Batch size for training
+    num_workers: int = 0  # Number of workers used in data-loading
     labels_path: str = 'labels.json'  # Contains tokens for model output
     spect: SpectConfig = SpectConfig()
     augmentation: AugmentationConfig = AugmentationConfig()
@@ -77,12 +79,12 @@ class SGDConfig(OptimConfig):
 @dataclass
 class AdamConfig(OptimConfig):
     eps: float = 1e-8  # Adam eps
-    betas: tuple = (0.9, 0.999)  # Adam betas
+    betas: tuple = (0.9, 0.999)  # Adam 
 
 
 @dataclass
 class CheckpointConfig:
-    continue_from: str = ''  # Continue training from checkpoint model
+    continue_from: str = 'models/deepspeech_final_ONLINE.pth'  # Continue training from checkpoint model
     checkpoint: bool = True  # Enables epoch checkpoint saving of model
     checkpoint_per_iteration: int = 500 # Save checkpoint per N number of iterations. Default is disabled
     save_n_recent_models: int = 10  # Max number of checkpoints to save, delete older checkpoints
