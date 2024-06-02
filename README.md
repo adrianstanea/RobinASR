@@ -11,35 +11,9 @@ Also, make sure to visit:
 
 ## Installation
 
-### Docker
 
-We offer two docker containers that are available on dockerhub and that provide the RobinASR out of the box:
-- for running on GPU: 
-```
-docker pull racai/robinasr:gpu
-docker run --gpus all -p 8888:8888 --net=host --ipc=host racai/robinasr:gpu
-```
-- for running on CPU:
-```
-docker pull racai/robinasr:cpu
-docker run -p 8888:8888 --net=host --ipc=host racai/robinasr:cpu
-```
+Download the pretrained text-to-speech model and the pretrained KenLM at the above links, and copy them in a `models` directory inside this repository.
 
-You can also create your own docker image by following these steps:
-
-1) Download the pretrained text-to-speech model and the pretrained KenLM at the above links, and copy them in a `models` directory inside this repository.
-
-2) Build the docker image using the `Dockerfile`. Make sure that `deepspeech_pytorch/configs/inference_config.py` has the desired configuration.
-
-```
-docker build --tag RobinASR .
-```
-
-3) Run the docker image.
-
-```
-docker run --gpus all -p 8888:8888 --net=host --ipc=host RobinASR
-```
 
 ### From Source
 
